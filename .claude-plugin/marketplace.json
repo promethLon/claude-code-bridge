@@ -3,6 +3,7 @@
   "owner": {
     "name": "promethLon"
   },
+  "description": "Single-plugin marketplace for claude-code-bridge: delegate tasks to the Claude Code CLI from any coding-agent harness.",
   "plugins": [
     {
       "name": "claude-code-bridge",
