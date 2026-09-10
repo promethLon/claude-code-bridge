@@ -1,0 +1,11 @@
+{
+  "name": "claude-code-bridge",
+  "version": "0.1.0",
+  "description": "Delegate tasks to the Claude Code CLI from any coding-agent harness — native resumable sessions, background jobs, permission modes and budget caps.",
+  "author": {
+    "name": "promethLon"
+  },
+  "homepage": "https://github.com/promethLon/claude-code-bridge",
+  "repository": "https://github.com/promethLon/claude-code-bridge",
+  "license": "MIT"
+}

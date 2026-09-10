@@ -1,0 +1,13 @@
+{
+  "name": "claude-code-bridge",
+  "owner": {
+    "name": "promethLon"
+  },
+  "plugins": [
+    {
+      "name": "claude-code-bridge",
+      "source": "./",
+      "description": "Delegate tasks to the Claude Code CLI from any coding-agent harness — resumable sessions, background jobs, permission modes and budget caps."
+    }
+  ]
+}
