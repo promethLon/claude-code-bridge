@@ -19,7 +19,7 @@ The bridge wraps `claude -p --output-format json` and adds per-workspace bookkee
 - The delegate subagent is a forwarder. One `task` call, stdout returned verbatim.
 - Prefer the helper over hand-rolled `claude` invocations, direct CLI strings, or manual `git` activity.
 - Do not call `status`, `result`, `stop`, or `sessions` from the subagent; those belong to the main thread.
-- Strip routing flags (`--background`, `--read-only`, `--worktree`, `--model`, `--budget`, `--resume`, `--resume-last`, `--fresh`) from the natural-language task text.
+- Strip routing flags (`--background`, `--read-only`, `--allow`, `--deny`, `--yolo`, `--worktree`, `--model`, `--budget`, `--resume`, `--resume-last`, `--fresh`) from the natural-language task text.
 
 ## Flag contract
 
@@ -27,6 +27,9 @@ The bridge wraps `claude -p --output-format json` and adds per-workspace bookkee
 |---|---|---|
 | `--background` | detached run; prints job id for `result`/`stop` | foreground |
 | `--read-only` | `--permission-mode plan` (read/analyze only) | `acceptEdits` (write-capable) |
+| `--allow <toolspec>` | pre-authorize a tool rule for the child (repeatable), e.g. `Bash(npm test:*)` | none |
+| `--deny <toolspec>` | forbid a tool rule for the child (repeatable) | none |
+| `--yolo` | bypass all permission checks; prefer paired with `--worktree` | off |
 | `--worktree` | fresh git worktree sandbox (`cc-<jobid>`) | off |
 | `--model <id>` | model override, passed verbatim | settings.json default |
 | `--effort <level>` | thinking effort: `low\|medium\|high\|xhigh\|max` | CLI default (`high`) |
@@ -35,8 +38,15 @@ The bridge wraps `claude -p --output-format json` and adds per-workspace bookkee
 | `--budget <usd>` | `--max-budget-usd` cap | uncapped |
 | `--cwd <dir>` | working directory for the child | current dir |
 
-- `--resume` and `--resume-last` are mutually exclusive.
+- `--resume` and `--resume-last` are mutually exclusive; so are `--read-only` and `--yolo`.
 - The task text may arrive as trailing arguments or on stdin; the bridge reads piped stdin automatically.
+
+## Permission model
+
+- Default mode is `acceptEdits`: file edits inside the workspace are auto-accepted, and sandbox-safe commands (read-only shell work) run sandboxed without asking.
+- Anything with wider side effects — installs, network calls, writes outside the cwd, `git push` — has no interactive prompt in headless mode. It is **auto-denied**.
+- A denied child either works around it or returns a permission request in its final message. That reply is a decision point, not an error: the main thread/user re-runs the follow-up as `task --resume <id> --allow "<toolspec>" "<delta>"`, or escalates to `--yolo` (ideally with `--worktree`).
+- Pass `--allow` up front when the brief already names the commands the child must run (build, test, install). `--yolo` without `--worktree` grants in-place writes — use it only on explicit request.
 
 ## Reading output
 

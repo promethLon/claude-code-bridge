@@ -12,7 +12,7 @@ Claude Code already owns sessions, background work, permissions, budgets and str
 |---|---|---|
 | Sessions | `--resume <id>` / `--fork-session`, ids returned in JSON | per-workspace bookkeeping of which id to resume |
 | Background | detached `claude -p` writes clean result JSON | spawn + pid + log file (~60 lines) |
-| Permissions | `--permission-mode plan/acceptEdits` | `--read-only` / default-write mapping |
+| Permissions | `--permission-mode plan/acceptEdits`, `--allowedTools`, `--dangerously-skip-permissions` | `--read-only` / `--allow` / `--deny` / `--yolo` mapping |
 | Sandbox | `--worktree` | pass-through |
 | Budget | `--max-budget-usd` | `--budget` pass-through |
 | Structured output | `--output-format json` | render/parse |
@@ -49,6 +49,9 @@ If your harness supports the [Agent Skills](https://code.claude.com/docs/en/skil
 claude-companion.mjs task [options] [prompt]    delegate a task to Claude Code
   --background          run detached; prints job id for status/result/stop
   --read-only           plan permission mode (default: acceptEdits, write-capable)
+  --allow <toolspec>    pre-authorize a tool rule for the child (repeatable)
+  --deny <toolspec>     forbid a tool rule for the child (repeatable)
+  --yolo                bypass all permission checks (dangerous; prefer --worktree)
   --worktree            run in a fresh git worktree (sandboxed writes)
   --model <id>          override model (passed verbatim to the CLI)
   --effort <level>      thinking effort: low|medium|high|xhigh|max (default: high)
@@ -76,6 +79,7 @@ Every successful run prints a `continue:` line with the exact command to resume 
 ## Defaults
 
 - Write-capable by default (`acceptEdits`); `--read-only` opts into plan mode. This channel is an execution channel, not a review gate — the calling agent decides what to do with the results.
+- Permission model: `acceptEdits` auto-accepts in-workspace edits and sandbox-safe commands; anything with wider side effects (installs, network, writes outside the cwd) is **auto-denied** in headless mode. Grant specific tools up front with `--allow "Bash(npm test:*)"`, or bypass everything with `--yolo` — preferably inside `--worktree`. A child reply that asks for permission is a decision point, not an error: re-run the follow-up with the grant added.
 - Model comes from the CLI's own configuration (`~/.claude/settings.json` routing or the signed-in account); `--model` overrides per task, passed through verbatim.
 - State lives under `$CLAUDE_PLUGIN_DATA/state/<workspace-slug>-<hash>/` when set by the host (git-root keyed, capped at 50 records), falling back to `~/.claude-code-bridge/`.
 

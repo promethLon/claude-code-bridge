@@ -13,3 +13,7 @@
 | 委托 | delegate | 主线程把一个自包含任务交给 Claude Code 会话执行的过程 |
 | 会话续接 | resume | 通过 `--resume <id>` / `--resume-last` 在已存在的 Claude 会话上继续工作 |
 | 后台任务 | background job | 分离进程运行的委托任务，用 `result`/`stop` 轮询或终止 |
+| 权限预授权 | --allow / allowedTools | 在发起委托时预先放行子会话的某个工具规则（如 `Bash(npm test:*)`） |
+| 权限拒绝 | auto-deny / permission denial | headless 模式下无交互提示，超出权限模式的操作被自动拒绝 |
+| 全放行 | --yolo / bypass permissions | 跳过全部权限检查（映射 `--dangerously-skip-permissions`），宜配合工作树使用 |
+| 工具规则 | toolspec | Claude Code 权限规则字符串，形如 `Bash(npm test:*)`、`WebFetch` |

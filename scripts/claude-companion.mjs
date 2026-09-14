@@ -27,6 +27,7 @@ function parseArgs(argv) {
   const flags = {};
   const positional = [];
   const valueFlags = new Set(["model", "resume", "budget", "cwd", "effort"]);
+  const listFlags = new Set(["allow", "deny"]);
 
   for (let i = 1; i < argv.length; i++) {
     const token = argv[i];
@@ -35,7 +36,9 @@ function parseArgs(argv) {
       continue;
     }
     const name = token.slice(2);
-    if (valueFlags.has(name)) {
+    if (listFlags.has(name)) {
+      (flags[name] ??= []).push(argv[++i]);
+    } else if (valueFlags.has(name)) {
       flags[name] = argv[++i];
     } else {
       flags[name] = true;
@@ -49,6 +52,9 @@ function printUsage() {
   claude-companion.mjs task [options] [prompt]    delegate a task to Claude Code
     --background            run detached; prints job id for status/result/stop
     --read-only             plan permission mode (default: acceptEdits, write-capable)
+    --allow <toolspec>      pre-authorize a tool rule for the child (repeatable)
+    --deny <toolspec>       forbid a tool rule for the child (repeatable)
+    --yolo                  bypass all permission checks (dangerous; prefer --worktree)
     --worktree              run in a fresh git worktree (sandboxed writes)
     --model <id>            override model (e.g. deepseek-flash, glm-5.3)
     --effort <level>        thinking effort: low|medium|high|xhigh|max (default: high)
@@ -130,12 +136,15 @@ function claudeBinary() {
   return resolved;
 }
 
-function buildClaudeArgs({ prompt, resumeId, model, mode, budget, worktree, jobId, effort }) {
+function buildClaudeArgs({ prompt, resumeId, model, mode, budget, worktree, jobId, effort, allow, deny, yolo }) {
   const args = ["-p", prompt, "--output-format", "json"];
   if (resumeId) args.push("--resume", resumeId);
   if (model) args.push("--model", model);
   if (effort) args.push("--effort", effort);
   if (mode) args.push("--permission-mode", mode);
+  for (const spec of allow ?? []) args.push("--allowedTools", spec);
+  for (const spec of deny ?? []) args.push("--disallowedTools", spec);
+  if (yolo) args.push("--dangerously-skip-permissions");
   if (budget) args.push("--max-budget-usd", String(budget));
   if (worktree) args.push("--worktree", `cc-${jobId}`);
   return args;
@@ -214,6 +223,7 @@ function renderTaskReport(summary, meta, jobId) {
     summary.model,
     meta.mode,
     meta.worktree ? "worktree" : null,
+    meta.yolo ? "yolo" : null,
   ].filter(Boolean);
   lines.push(`[${status}] claude-code · ${bits.join(" · ")}`);
   if (meta.background) lines.push(`job: ${jobId} (result: claude-companion.mjs result ${jobId})`);
@@ -256,6 +266,7 @@ function cmdTask(flags, positional) {
   const prompt = readPrompt(positional);
   if (!prompt) fail("no prompt given (argument or stdin).");
   if (flags.resume && flags["resume-last"]) fail("--resume and --resume-last are mutually exclusive.");
+  if (flags["read-only"] && flags.yolo) fail("--read-only and --yolo are mutually exclusive.");
   claudeBinary();
 
   const resume = pickResumeTarget(cwd, flags);
@@ -267,6 +278,9 @@ function cmdTask(flags, positional) {
     model: flags.model,
     effort: flags.effort,
     mode,
+    allow: flags.allow,
+    deny: flags.deny,
+    yolo: Boolean(flags.yolo),
     budget: flags.budget,
     worktree: flags.worktree,
     jobId,
@@ -277,6 +291,7 @@ function cmdTask(flags, positional) {
     effort: flags.effort ?? null,
     mode,
     worktree: Boolean(flags.worktree),
+    yolo: Boolean(flags.yolo),
     background: Boolean(flags.background),
     resumeOf: resume.id,
   };
@@ -332,6 +347,7 @@ function runBackground(cwd, args, jobId, meta, flags) {
     effort: meta.effort,
     mode: meta.mode,
     worktree: meta.worktree,
+    yolo: meta.yolo,
     resume_of: meta.resumeOf,
     prompt_head: meta.prompt.slice(0, 160),
     background: true,

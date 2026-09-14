@@ -32,6 +32,7 @@ When following up with `--resume-last` / `--resume`, the prior context carries o
 ## Boundaries
 
 - Declare blast radius: which paths may be touched, which must not ("only src/plugins/*, do not touch pnpm-lock.yaml").
+- Declare the permissions the task needs: name the exact commands the child must run (build, test, install) so the main thread can pass `--allow "Bash(npm test:*)"` up front. A headless child that hits an ungranted permission is auto-denied and comes back with a question instead of a result.
 - For wide or risky edits, prefer `--worktree` so changes land in an isolated `cc-<jobid>` worktree the main thread can inspect and merge deliberately.
 - Budget-sensitive or long tasks: say so in the brief and let the main thread pass `--budget`.
 
